@@ -374,6 +374,53 @@ const generateemp_id = (callback) => {
       });
     });
   });
+  app.put("/api/users/:emp_id", (req, res) => {
+    const { emp_id } = req.params;
+    const { user_email, role, user_name, dob, password } = req.body;
+
+    if (!user_email || !role || !user_name || !dob) {
+        return res.status(400).json({ error: "All fields except password are required" });
+    }
+
+    // Check if the user wants to update the password
+    if (password) {
+        bcrypt.hash(password, 10, (err, hashedPassword) => {
+            if (err) {
+                return res.status(500).json({ error: "Error hashing password" });
+            }
+
+            const sql = "UPDATE user SET user_email = ?, role = ?, user_name = ?, dob = ?, password = ? WHERE emp_id = ?";
+            db.query(sql, [user_email, role, user_name, dob, hashedPassword, emp_id], (err, result) => {
+                if (err) {
+                    console.error(err);
+                    return res.status(500).json({ error: "Database error" });
+                }
+
+                if (result.affectedRows === 0) {
+                    return res.status(404).json({ message: "User not found" });
+                }
+
+                res.status(200).json({ message: "User updated successfully, including password change" });
+            });
+        });
+    } else {
+        // Update without changing the password
+        const sql = "UPDATE user SET user_email = ?, role = ?, user_name = ?, dob = ? WHERE emp_id = ?";
+        db.query(sql, [user_email, role, user_name, dob, emp_id], (err, result) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).json({ error: "Database error" });
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ message: "User not found" });
+            }
+
+            res.status(200).json({ message: "User updated successfully" });
+        });
+    }
+});
+
 
   app.get("/api/users", (req, res) => {
     const sql = 'SELECT * FROM user';
